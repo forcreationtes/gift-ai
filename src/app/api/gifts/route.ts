@@ -3,13 +3,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { buildGiftIdeas } from "@/lib/ai";
 import { searchProducts } from "@/lib/amazon";
 
-// Use Node runtime (good for external SDKs/signing)
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /** Client payload: supports current and earlier field names */
 type RequestBody = {
-  age?: string;
+  age?: string;         // e.g., "Adult (25–34)" from the UI
   gender?: string;
   likes?: string[];
   budget?: string;
@@ -28,7 +27,7 @@ type Idea = {
   [key: string]: unknown;
 };
 
-// Optional health check: GET /api/gifts
+// Health check
 export async function GET() {
   return NextResponse.json({ ok: true, message: "gifts api live" });
 }
@@ -38,7 +37,7 @@ export async function POST(req: NextRequest) {
     const raw = (await req.json()) as Partial<RequestBody>;
 
     // Accept both naming styles
-    const age = (raw.age ?? raw.ageGroup ?? "").toString();
+    const ageLabel = (raw.age ?? raw.ageGroup ?? "").toString();
     const gender = (raw.gender ?? raw.identity ?? "").toString();
     const likes = (
       Array.isArray(raw.likes)
@@ -51,15 +50,23 @@ export async function POST(req: NextRequest) {
       .filter(Boolean);
     const budget = (raw.budget ?? "").toString();
 
-    // Validation: require at least 1 like (keeps UX smooth)
-    if (!age || likes.length < 1) {
+    // Validation
+    if (!ageLabel || likes.length < 1) {
       return NextResponse.json({ error: "Invalid input" }, { status: 400 });
     }
 
-    // Build ideas with your AI helper
-    const ideas = (await buildGiftIdeas({ age, gender, likes, budget })) as Idea[];
+    // Convert the UI label to a numeric age for the model
+    const ageNumber = toAgeNumber(ageLabel);
 
-    // Enrich ideas with a product search (Amazon or your own)
+    // Build ideas (buildGiftIdeas expects age:number)
+    const ideas = (await buildGiftIdeas({
+      age: ageNumber,
+      gender,
+      likes,
+      budget,
+    })) as Idea[];
+
+    // Enrich ideas with products
     const enriched = await Promise.all(
       ideas.map(async (idea: Idea) => {
         const kw =
@@ -73,7 +80,6 @@ export async function POST(req: NextRequest) {
           return { ...idea, product };
         } catch (err) {
           console.error("searchProducts failed:", { kw, err });
-          // keep the idea even if enrichment fails
           return { ...idea, product: null };
         }
       })
@@ -84,4 +90,22 @@ export async function POST(req: NextRequest) {
     console.error(e);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
+}
+
+/** Converts labels like "Adult (25–34)" / "Senior (65+)" to a representative number */
+function toAgeNumber(label: string): number {
+  // First number in the string (works for 13–17, 65+, etc.)
+  const m = label.match(/\d+/);
+  if (m) return clamp(parseInt(m[0], 10), 5, 100);
+
+  const s = label.toLowerCase();
+  if (s.includes("teen")) return 16;
+  if (s.includes("young")) return 21;
+  if (s.includes("senior")) return 70;
+  if (s.includes("adult")) return 30;
+  return 30; // sensible default
+}
+
+function clamp(n: number, lo: number, hi: number) {
+  return Math.max(lo, Math.min(hi, n));
 }
