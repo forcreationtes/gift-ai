@@ -2,10 +2,11 @@
 "use client";
 
 import { RadioGroup, Listbox, Transition } from "@headlessui/react";
+import { Fragment } from "react";
 import GiftBoxIcon from "./icons/GiftBoxIcon";
 import { OCCASION_THEMES, type OccasionKey } from "./occasionThemes";
 
-// Derive lists locally so we don't depend on missing exports
+// Derive lists locally (avoids importing non-existent exports)
 const FEATURED_OCCASIONS: OccasionKey[] = (
   Object.keys(OCCASION_THEMES) as OccasionKey[]
 ).filter((k) => OCCASION_THEMES[k].featured);
@@ -38,7 +39,7 @@ export default function OccasionSelector({ value, onChange }: Props) {
             const theme = OCCASION_THEMES[key];
             const isSelected = value === key;
 
-            // Only show subtitle if different from label (prevents duplicates like "Birthday")
+            // Avoid duplicate subtitle if it equals the label
             const subtitle = key.replaceAll("_", " ");
             const showSubtitle =
               subtitle.toLowerCase() !== theme.label.toLowerCase();
@@ -57,7 +58,12 @@ export default function OccasionSelector({ value, onChange }: Props) {
                     ].join(" ")}
                     aria-pressed={checked}
                   >
-                    <GiftBoxIcon className="h-10 w-10" style={{ color: theme.primary }} />
+                    <GiftBoxIcon
+                      className="h-10 w-10"
+                      primary={theme.primary}
+                      secondary={theme.secondary}
+                      ribbon={theme.ribbon}
+                    />
                     <div className="flex min-w-0 flex-col">
                       <span className="truncate font-medium">{theme.label}</span>
                       {showSubtitle && (
@@ -99,13 +105,12 @@ export default function OccasionSelector({ value, onChange }: Props) {
               </Listbox.Button>
 
               <Transition
-                as="div"
+                as={Fragment}
                 leave="transition ease-in duration-100"
                 leaveFrom="opacity-100"
                 leaveTo="opacity-0"
               >
                 <Listbox.Options className="absolute z-10 mt-2 max-h-72 w-full overflow-auto rounded-xl border border-neutral-200 bg-white p-1 text-sm shadow-lg dark:bg-neutral-900 dark:border-neutral-800">
-                  {/* Show ALL occasions so user can switch freely */}
                   {[...FEATURED_OCCASIONS, ...MORE_OCCASIONS].map((key) => {
                     const theme = OCCASION_THEMES[key];
                     return (
@@ -120,7 +125,12 @@ export default function OccasionSelector({ value, onChange }: Props) {
                         }
                       >
                         <div className="flex items-center gap-3">
-                          <GiftBoxIcon className="h-5 w-5" style={{ color: theme.primary }} />
+                          <GiftBoxIcon
+                            className="h-5 w-5"
+                            primary={theme.primary}
+                            secondary={theme.secondary}
+                            ribbon={theme.ribbon}
+                          />
                           <span className="block truncate">{theme.label}</span>
                         </div>
                       </Listbox.Option>
