@@ -3,47 +3,79 @@ import { NextRequest, NextResponse } from "next/server";
 import { buildGiftIdeas } from "@/lib/ai";
 import { searchProducts } from "@/lib/amazon";
 
-// Use Node runtime (better for external SDKs/signing)
+// Use Node runtime (good for external SDKs/signing)
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/** Request body we expect from the client */
+/** Client payload: supports current and earlier field names */
 type RequestBody = {
-  age: string;
-  gender: string;   // if you renamed to "identity" on the client, update here too
-  likes: string[];
-  budget: string;
+  age?: string;
+  gender?: string;
+  likes?: string[];
+  budget?: string;
+
+  // older / alternate names used by the client
+  ageGroup?: string;
+  identity?: string;
+  interests?: string[];
 };
 
-/** Minimal shape of what buildGiftIdeas returns that we rely on here */
+/** Minimal idea shape this route relies on */
 type Idea = {
-  keywords: string[];       // required for building an Amazon query
-  // any other fields your AI returns (id/title/etc.) are preserved by the spread
+  id?: string;
+  title?: string;
+  keywords?: string[];
   [key: string]: unknown;
 };
 
+// Optional health check: GET /api/gifts
+export async function GET() {
+  return NextResponse.json({ ok: true, message: "gifts api live" });
+}
+
 export async function POST(req: NextRequest) {
   try {
-    const body = (await req.json()) as Partial<RequestBody>;
-    const age = body.age ?? "";
-    const gender = body.gender ?? "";
-    const likes = Array.isArray(body.likes) ? body.likes : [];
-    const budget = body.budget ?? "";
+    const raw = (await req.json()) as Partial<RequestBody>;
 
-    // basic validation (you can relax the "3 likes" rule if you want)
-    if (!age || likes.length < 3) {
+    // Accept both naming styles
+    const age = (raw.age ?? raw.ageGroup ?? "").toString();
+    const gender = (raw.gender ?? raw.identity ?? "").toString();
+    const likes = (
+      Array.isArray(raw.likes)
+        ? raw.likes
+        : Array.isArray(raw.interests)
+        ? raw.interests
+        : []
+    )
+      .map(String)
+      .filter(Boolean);
+    const budget = (raw.budget ?? "").toString();
+
+    // Validation: require at least 1 like (keeps UX smooth)
+    if (!age || likes.length < 1) {
       return NextResponse.json({ error: "Invalid input" }, { status: 400 });
     }
 
-    // If buildGiftIdeas is untyped, cast to our minimal Idea shape
+    // Build ideas with your AI helper
     const ideas = (await buildGiftIdeas({ age, gender, likes, budget })) as Idea[];
 
-    // Guard against missing keywords arrays
+    // Enrich ideas with a product search (Amazon or your own)
     const enriched = await Promise.all(
       ideas.map(async (idea: Idea) => {
-        const kw = Array.isArray(idea.keywords) ? idea.keywords.join(" ") : "";
-        const product = await searchProducts({ query: kw, budget });
-        return { ...idea, product };
+        const kw =
+          (Array.isArray(idea.keywords) && idea.keywords.join(" ")) ||
+          [typeof idea.title === "string" ? idea.title : "", ...likes]
+            .filter(Boolean)
+            .join(" ");
+
+        try {
+          const product = await searchProducts({ query: kw, budget });
+          return { ...idea, product };
+        } catch (err) {
+          console.error("searchProducts failed:", { kw, err });
+          // keep the idea even if enrichment fails
+          return { ...idea, product: null };
+        }
       })
     );
 
