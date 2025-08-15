@@ -2,7 +2,7 @@
 import OpenAI from "openai";
 
 export type BuildArgs = {
-  age: number;            // we convert the label to a number in the route
+  age: number;            // route converts label -> number
   gender: string;
   likes: string[];
   budget: string;
@@ -48,17 +48,12 @@ Context:
       ],
     });
 
-    const text = resp.choices[0]?.message?.content?.trim() || "[]";
-    const json = safeExtractJson(text);
-    const ideas = Array.isArray(json) ? json : [];
+    const text = resp.choices[0]?.message?.content?.trim() ?? "[]";
+    const parsed = safeExtractJson(text);
 
-    // ensure minimal shape & fallback if empty
-    const normalized: Idea[] = ideas
-      .map((it: any, i: number) => ({
-        id: String(it?.id ?? `idea-${i + 1}`),
-        title: String(it?.title ?? defaultTitle(likes, i)),
-        keywords: Array.isArray(it?.keywords) ? it.keywords.map(String) : buildKeywords(likes, it?.title),
-      }))
+    const rawArray: unknown[] = Array.isArray(parsed) ? parsed : [];
+    const normalized: Idea[] = rawArray
+      .map((raw, i) => normalizeIdea(raw, i, likes))
       .slice(0, 8);
 
     return normalized.length ? normalized : mockIdeas({ age, gender, likes, budget });
@@ -70,9 +65,34 @@ Context:
 
 /* ----------------- helpers ----------------- */
 
-function safeExtractJson(text: string) {
+function normalizeIdea(raw: unknown, i: number, likes: string[]): Idea {
+  const obj: Record<string, unknown> =
+    typeof raw === "object" && raw !== null ? (raw as Record<string, unknown>) : {};
+
+  const title = toStringOrDefault(obj["title"], defaultTitle(likes, i));
+  const id = toStringOrDefault(obj["id"], `idea-${i + 1}`);
+  const keywords = isStringArray(obj["keywords"])
+    ? obj["keywords"]
+    : buildKeywords(likes, title);
+
+  return { id, title, keywords };
+}
+
+function safeExtractJson(text: string): unknown {
   const m = text.match(/\[[\s\S]*\]/);
-  try { return m ? JSON.parse(m[0]) : []; } catch { return []; }
+  try {
+    return m ? JSON.parse(m[0]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function isStringArray(x: unknown): x is string[] {
+  return Array.isArray(x) && x.every((v) => typeof v === "string");
+}
+
+function toStringOrDefault(x: unknown, fallback: string): string {
+  return typeof x === "string" && x.trim() ? x : fallback;
 }
 
 function defaultTitle(likes: string[], i: number) {
