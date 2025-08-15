@@ -2,14 +2,21 @@
 "use client";
 
 import { RadioGroup, Listbox, Transition } from "@headlessui/react";
-import { Fragment } from "react";
 import GiftBoxIcon from "./icons/GiftBoxIcon";
-import {
-  OCCASION_THEMES,
-  FEATURED_OCCASIONS,
-  MORE_OCCASIONS,
-  OccasionKey,
-} from "./occasionThemes";
+import { OCCASION_THEMES, type OccasionKey } from "./occasionThemes";
+
+// Derive lists locally so we don't depend on missing exports
+const FEATURED_OCCASIONS: OccasionKey[] = (
+  Object.keys(OCCASION_THEMES) as OccasionKey[]
+).filter((k) => OCCASION_THEMES[k].featured);
+
+const MORE_OCCASIONS: OccasionKey[] = (
+  Object.keys(OCCASION_THEMES) as OccasionKey[]
+)
+  .filter((k) => !OCCASION_THEMES[k].featured)
+  .sort((a, b) =>
+    OCCASION_THEMES[a].label.localeCompare(OCCASION_THEMES[b].label)
+  );
 
 type Props = {
   value: OccasionKey;
@@ -30,6 +37,12 @@ export default function OccasionSelector({ value, onChange }: Props) {
           {FEATURED_OCCASIONS.map((key) => {
             const theme = OCCASION_THEMES[key];
             const isSelected = value === key;
+
+            // Only show subtitle if different from label (prevents duplicates like "Birthday")
+            const subtitle = key.replaceAll("_", " ");
+            const showSubtitle =
+              subtitle.toLowerCase() !== theme.label.toLowerCase();
+
             return (
               <RadioGroup.Option key={key} value={key} className="focus:outline-none shrink-0">
                 {({ checked }) => (
@@ -44,15 +57,14 @@ export default function OccasionSelector({ value, onChange }: Props) {
                     ].join(" ")}
                     aria-pressed={checked}
                   >
-                    <GiftBoxIcon
-                      className="h-10 w-10"
-                      style={{ color: theme.primary }}
-                    />
+                    <GiftBoxIcon className="h-10 w-10" style={{ color: theme.primary }} />
                     <div className="flex min-w-0 flex-col">
                       <span className="truncate font-medium">{theme.label}</span>
-                      <span className="text-xs text-neutral-500 capitalize">
-                        {key.replaceAll("_", " ")}
-                      </span>
+                      {showSubtitle && (
+                        <span className="text-xs text-neutral-500 capitalize">
+                          {subtitle}
+                        </span>
+                      )}
                     </div>
                     <span
                       aria-hidden
@@ -72,7 +84,7 @@ export default function OccasionSelector({ value, onChange }: Props) {
       {/* More occasions (dropdown) */}
       {MORE_OCCASIONS.length > 0 && (
         <div className="flex items-center gap-3">
-          <span className="text-sm text-neutral-600 dark:text-neutral-300 w-32 shrink-0">
+          <span className="w-32 shrink-0 text-sm text-neutral-600 dark:text-neutral-300">
             More occasions
           </span>
           <Listbox value={value} onChange={onChange}>
@@ -85,16 +97,15 @@ export default function OccasionSelector({ value, onChange }: Props) {
                   {OCCASION_THEMES[value]?.label ?? "Select occasion"}
                 </span>
               </Listbox.Button>
+
               <Transition
-                as={Fragment}
+                as="div"
                 leave="transition ease-in duration-100"
                 leaveFrom="opacity-100"
                 leaveTo="opacity-0"
               >
-                <Listbox.Options
-                  className="absolute z-10 mt-2 max-h-72 w-full overflow-auto rounded-xl border border-neutral-200 bg-white p-1 text-sm shadow-lg dark:bg-neutral-900 dark:border-neutral-800"
-                >
-                  {/* Show ALL occasions, or only MORE (choose one). Here: show ALL so user can switch */}
+                <Listbox.Options className="absolute z-10 mt-2 max-h-72 w-full overflow-auto rounded-xl border border-neutral-200 bg-white p-1 text-sm shadow-lg dark:bg-neutral-900 dark:border-neutral-800">
+                  {/* Show ALL occasions so user can switch freely */}
                   {[...FEATURED_OCCASIONS, ...MORE_OCCASIONS].map((key) => {
                     const theme = OCCASION_THEMES[key];
                     return (
