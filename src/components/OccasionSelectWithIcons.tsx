@@ -1,45 +1,72 @@
+// src/components/OccasionSelectWithIcons.tsx
 "use client";
-import { Listbox, Transition } from "@headlessui/react";
-import { Fragment } from "react";
+
 import GiftBoxIcon from "./icons/GiftBoxIcon";
-import { OCCASION_THEMES } from "./occasionThemes";
+import { OCCASION_ICON_MAP } from "./icons/occasionIcons";
+import { OCCASION_THEMES, type OccasionKey } from "./occasionThemes";
+
+type Props = {
+  value: OccasionKey;
+  onChange: (o: OccasionKey) => void;
+  label?: string;
+};
 
 export default function OccasionSelectWithIcons({
-  value, onChange, label = "Occasion",
-}: { value: Occasion; onChange: (o: Occasion) => void; label?: string }) {
-  const items = Object.keys(OCCASION_THEMES) as Occasion[];
+  value,
+  onChange,
+  label = "Occasion",
+}: Props) {
+  const items = Object.keys(OCCASION_THEMES) as OccasionKey[];
 
   return (
-    <div className="w-full">
-      <label className="mb-1 block text-sm text-neutral-200">{label}</label>
-      <Listbox value={value} onChange={onChange}>
-        <div className="relative">
-          <Listbox.Button className="relative w-full cursor-pointer rounded-xl bg-white/80 px-4 py-3 text-left shadow backdrop-blur-sm">
-            <div className="flex items-center gap-3">
-              <GiftBoxIcon size={28} theme={OCCASION_THEMES[value]} />
-              <span>{value}</span>
-            </div>
-          </Listbox.Button>
+    <div className="space-y-2">
+      <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-200">
+        {label}
+      </label>
 
-          <Transition as={Fragment} leave="transition ease-in duration-100" leaveFrom="opacity-100" leaveTo="opacity-0">
-            <Listbox.Options className="absolute z-10 mt-2 max-h-72 w-full overflow-auto rounded-xl bg-white p-2 shadow-xl">
-              {items.map((name) => {
-                const theme = OCCASION_THEMES[name];
-                return (
-                  <Listbox.Option
-                    key={name}
-                    value={name}
-                    className="group flex cursor-pointer items-center gap-3 rounded-lg p-2 hover:bg-neutral-100"
-                  >
-                    <GiftBoxIcon size={32} theme={theme} />
-                    <span>{name}</span>
-                  </Listbox.Option>
-                );
-              })}
-            </Listbox.Options>
-          </Transition>
-        </div>
-      </Listbox>
+      <div className="flex flex-wrap gap-3">
+        {items
+          .filter((k) => OCCASION_THEMES[k].featured)
+          .map((k) => {
+            const theme = OCCASION_THEMES[k];
+            const Icon =
+              (theme.iconId && OCCASION_ICON_MAP[theme.iconId]) || GiftBoxIcon;
+            const checked = value === k;
+
+            return (
+              <button
+                key={k}
+                type="button"
+                onClick={() => onChange(k)}
+                className={[
+                  "relative flex h-[72px] w-[220px] items-center gap-3 rounded-xl border bg-white p-3 text-left shadow-sm transition",
+                  "dark:bg-neutral-900 dark:border-neutral-800",
+                  checked
+                    ? "border-brand-500 ring-2 ring-brand-400/60"
+                    : "border-neutral-200 hover:border-neutral-300",
+                ].join(" ")}
+              >
+                <Icon
+                  className="h-10 w-10"
+                  primary={theme.primary}
+                  secondary={theme.secondary}
+                  ribbon={theme.ribbon}
+                />
+                <div className="min-w-0">
+                  <div className="truncate font-medium">{theme.label}</div>
+                </div>
+
+                <span
+                  aria-hidden
+                  className={[
+                    "absolute right-2 top-2 h-2.5 w-2.5 rounded-full",
+                    checked ? "bg-brand-500" : "bg-neutral-300",
+                  ].join(" ")}
+                />
+              </button>
+            );
+          })}
+      </div>
     </div>
   );
 }
