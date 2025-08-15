@@ -1,34 +1,47 @@
 export const metadata = {
   title: "Affiliate Disclosure | Gift Genius",
   description:
-    "Affiliate disclosure for Gift Genius describing our participation in the Amazon Services LLC Associates Program.",
+    "Affiliate disclosure for Gift Genius. We may earn commissions from qualifying purchases.",
+  robots: { index: true, follow: true },
 };
 
 export default function DisclosurePage() {
   return (
-    <main className="mx-auto max-w-3xl px-4 py-10 prose prose-neutral dark:prose-invert">
+    <main className="mx-auto max-w-3xl px-6 py-12 prose dark:prose-invert">
       <h1>Affiliate Disclosure</h1>
+
       <p>
-        Gift Genius participates in the Amazon Services LLC Associates Program,
-        an affiliate advertising program designed to provide a means for sites to
-        earn advertising fees by advertising and linking to Amazon properties,
-        including <a href="https://www.amazon.com/">amazon.com</a>.
+        <strong>As an Amazon Associate, we earn from qualifying purchases.</strong>
+        Some links on this site are affiliate links. If you click a link and buy
+        something, we may earn a commission at no extra cost to you.
       </p>
+
+      <h2>How recommendations are generated</h2>
       <p>
-        As an Amazon Associate, we earn from qualifying purchases. Product prices
-        and availability are accurate as of the date/time indicated and are subject
-        to change. Any price and availability information displayed on Amazon at
-        the time of purchase will apply to the purchase of the product.
+        Gift ideas are suggested by our AI based on the occasion, budget, and
+        interests you provide. We do not accept payment to include specific products
+        in results. Product availability and pricing can change at any time—please
+        verify details on the retailer’s site.
       </p>
+
+      <h2>Other retailers</h2>
       <p>
-        Some links on this site are affiliate links. If you click on an affiliate
-        link and make a purchase, we may receive a small commission—at no
-        additional cost to you. This helps us keep the site running and improve
-        our gift recommendations.
+        We may also link to other retailers. Those sites have their own terms and
+        privacy policies.
       </p>
+
+      <h2>Accuracy & updates</h2>
       <p>
-        If you have questions about our affiliate relationships, please contact us
-        at <a href="mailto:hello@giftgenius.app">hello@giftgenius.app</a>.
+        We strive to keep results useful and current, but we cannot guarantee that
+        prices, availability, or promotions shown in our suggestions remain accurate
+        after you visit a retailer.
+      </p>
+
+      <h2>Questions</h2>
+      <p>
+        For questions about this disclosure, contact us at{" "}
+        <a href="mailto:hello@example.com">hello@example.com</a>. You can also read our{" "}
+        <a href="/privacy">Privacy Policy</a>.
       </p>
     </main>
   );
