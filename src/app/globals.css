@@ -1,8 +1,8 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
-/* Optional: small base tweaks */
-:root { color-scheme: light dark; }
-html, body { height: 100%; }
-* { -webkit-tap-highlight-color: transparent; }
+/* Optional base tweaks */
+@layer base {
+  :root { color-scheme: light dark; }
+  html, body { height: 100%; }
+  /* Don't set body bg/text here if you want dark mode to work via classes */
+}
